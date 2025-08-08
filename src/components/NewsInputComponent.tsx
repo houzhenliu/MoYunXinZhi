@@ -1,12 +1,18 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface InputData {
   AGENT_USER_INPUT: string;
   live: { url: string; desc: string }[];
   quote: QuoteItem[];
+}
+
+interface OutputData extends InputData {
+  output: string;
 }
 
 interface QuoteItem {
@@ -24,89 +30,336 @@ interface ExtendedFile extends File {
 }
 
 interface NewsInputComponentProps {
-  onSubmit?: (data: InputData) => void;
+  onSubmit?: (data: OutputData) => void;
+  initialData?: InputData | null; // 添加初始数据支持
 }
 
-// 解析返回内容中的图片标记
+// 解析返回内容中的图片标记并支持 Markdown 渲染
 export const parseContentWithImages = (
   content: string, 
   liveImages: { url: string; desc: string }[], 
   quotes: QuoteItem[]
-): React.ReactNode[] => {
-  const parts: React.ReactNode[] = [];
+): React.ReactNode => {
+  // 输入验证
+  if (!content) {
+    return <div>暂无内容</div>;
+  }
   
+  if (!liveImages) {
+    liveImages = [];
+  }
+  
+  if (!quotes) {
+    quotes = [];
+  }
+
   // 构建图片映射
   const imageMap: { [desc: string]: string } = {};
   
   // 添加现场图片映射
   liveImages.forEach(item => {
-    imageMap[item.desc] = item.url;
+    if (item && item.desc && item.url) {
+      imageMap[item.desc] = item.url;
+    }
   });
   
   // 添加发言图片映射
   quotes.forEach(quote => {
-    if (quote.image && quote.desc) {
+    if (quote && quote.image && quote.desc) {
       imageMap[quote.desc] = quote.image;
     }
   });
   
-  // 匹配 [[这里情插入"id"]] 格式
-  const pattern = /\[\[这里情插入"([^"]+)"\]\]/g;
-  let lastIndex = 0;
-  let match;
-  let keyIndex = 0;
+  // 替换图片占位符为实际图片标签
+  let processedContent = content;
   
-  while ((match = pattern.exec(content)) !== null) {
-    // 添加匹配前的文本
-    if (match.index > lastIndex) {
-      const textPart = content.slice(lastIndex, match.index);
-      if (textPart) {
-        parts.push(<span key={`text-${keyIndex++}`}>{textPart}</span>);
-      }
-    }
-    
-    // 查找对应的图片URL
-    const imageDesc = match[1];
-    const imageUrl = imageMap[imageDesc];
-    
+  // 支持两种格式的图片占位符
+  // 格式1: [[这里情插入"描述"]]
+  const pattern1 = /\[\[这里情插入"([^"]+)"\]\]/g;
+  // 格式2: [[描述]]
+  const pattern2 = /\[\[([^\]]+)\]\]/g;
+  
+  // 先处理格式1
+  processedContent = processedContent.replace(pattern1, (match, desc) => {
+    const imageUrl = imageMap[desc];
     if (imageUrl) {
-      // 添加换行和图片
-      parts.push(<br key={`br-before-${keyIndex}`} />);
-      parts.push(
-        <Image 
-          key={`img-${keyIndex++}`}
-          src={imageUrl} 
-          alt={imageDesc}
-          width={500}
-          height={300}
-          className="max-w-full h-auto my-2 rounded border"
-        />
-      );
-      parts.push(<br key={`br-after-${keyIndex}`} />);
+      // 返回 Markdown 格式的图片标签
+      return `![${desc}](${imageUrl})`;
     } else {
       // 如果找不到图片，保留原始标记
-      parts.push(<span key={`placeholder-${keyIndex++}`}>{match[0]}</span>);
+      return match;
     }
-    
-    lastIndex = pattern.lastIndex;
-  }
+  });
   
-  // 添加剩余的文本
-  if (lastIndex < content.length) {
-    const remainingText = content.slice(lastIndex);
-    if (remainingText) {
-      parts.push(<span key={`text-final-${keyIndex}`}>{remainingText}</span>);
+  // 再处理格式2
+  processedContent = processedContent.replace(pattern2, (match, desc) => {
+    const imageUrl = imageMap[desc];
+    if (imageUrl) {
+      // 返回 Markdown 格式的图片标签
+      return `![${desc}](${imageUrl})`;
+    } else {
+      // 如果找不到图片，保留原始标记
+      return match;
     }
-  }
+  });
   
-  return parts;
-};
-
-const NewsInputComponent: React.FC<NewsInputComponentProps> = ({ onSubmit }) => {
-  const [textInput, setTextInput] = useState<string>('');
+  // 使用最简单的渲染方式，避免复杂的嵌套
+  try {
+    return (
+      <div style={{ lineHeight: 1.6 }}>
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          components={{
+            // 图片组件 - 使用最简单的结构
+            img: ({ src, alt }) => {
+              if (src && typeof src === 'string') {
+                return (
+                  <div style={{ margin: '8px 0' }}>
+                    <Image
+                      src={src}
+                      alt={alt || ''}
+                      width={500}
+                      height={300}
+                      style={{ 
+                        maxWidth: '100%', 
+                        height: 'auto', 
+                        borderRadius: '4px', 
+                        border: '1px solid #ddd'
+                      }}
+                      unoptimized
+                    />
+                  </div>
+                );
+              }
+              return null;
+            },
+            
+            // 所有其他组件使用简单的 div 结构
+            h1: ({ children }) => (
+              <div style={{ 
+                fontSize: '1.5rem', 
+                fontWeight: 'bold', 
+                marginBottom: '16px', 
+                marginTop: '24px'
+              }}>
+                {children}
+              </div>
+            ),
+            h2: ({ children }) => (
+              <div style={{ 
+                fontSize: '1.25rem', 
+                fontWeight: 'bold', 
+                marginBottom: '12px', 
+                marginTop: '20px'
+              }}>
+                {children}
+              </div>
+            ),
+            h3: ({ children }) => (
+              <div style={{ 
+                fontSize: '1.125rem', 
+                fontWeight: 'bold', 
+                marginBottom: '8px', 
+                marginTop: '16px'
+              }}>
+                {children}
+              </div>
+            ),
+            p: ({ children }) => (
+              <div style={{ 
+                marginBottom: '12px'
+              }}>
+                {children}
+              </div>
+            ),
+            ul: ({ children }) => (
+              <div style={{ 
+                marginBottom: '12px', 
+                marginLeft: '16px'
+              }}>
+                {children}
+              </div>
+            ),
+            ol: ({ children }) => (
+              <div style={{ 
+                marginBottom: '12px', 
+                marginLeft: '16px'
+              }}>
+                {children}
+              </div>
+            ),
+            li: ({ children }) => (
+              <div style={{ 
+                marginBottom: '4px',
+                position: 'relative',
+                paddingLeft: '16px'
+              }}>
+                <div style={{ 
+                  position: 'absolute',
+                  left: '0',
+                  top: '0'
+                }}>
+                  •
+                </div>
+                {children}
+              </div>
+            ),
+            blockquote: ({ children }) => (
+              <div style={{ 
+                borderLeft: '4px solid #ccc', 
+                paddingLeft: '16px', 
+                margin: '12px 0', 
+                fontStyle: 'italic', 
+                color: '#666' 
+              }}>
+                {children}
+              </div>
+            ),
+            table: ({ children }) => (
+              <div style={{ 
+                overflowX: 'auto', 
+                marginBottom: '12px' 
+              }}>
+                <table style={{ 
+                  minWidth: '100%', 
+                  borderCollapse: 'collapse', 
+                  border: '1px solid #ccc' 
+                }}>
+                  {children}
+                </table>
+              </div>
+            ),
+            th: ({ children }) => (
+              <th style={{ 
+                border: '1px solid #ccc', 
+                padding: '8px 12px', 
+                backgroundColor: '#f5f5f5', 
+                fontWeight: 'bold', 
+                textAlign: 'left' 
+              }}>
+                {children}
+              </th>
+            ),
+            td: ({ children }) => (
+              <td style={{ 
+                border: '1px solid #ccc', 
+                padding: '8px 12px' 
+              }}>
+                {children}
+              </td>
+            ),
+          }}
+        >
+          {processedContent}
+        </ReactMarkdown>
+      </div>
+    );
+  } catch (error) {
+    console.error('ReactMarkdown render error:', error);
+    // 降级到简单的文本显示
+    return (
+      <div style={{ 
+        whiteSpace: 'pre-wrap', 
+        wordBreak: 'break-word', 
+        lineHeight: 1.6 
+      }}>
+        {processedContent}
+      </div>
+    );
+  }
+};const NewsInputComponent: React.FC<NewsInputComponentProps> = ({ onSubmit, initialData }) => {
+  const [textInput, setTextInput] = useState<string>(initialData?.AGENT_USER_INPUT || '');
   const [images, setImages] = useState<ExtendedFile[]>([]);
-  const [quotes, setQuotes] = useState<QuoteItem[]>([]);
+  const [quotes, setQuotes] = useState<QuoteItem[]>(initialData?.quote || []);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  // 图片预览组件
+  const ImagePreview = ({ src, alt, maxHeight = 200 }: { src: string; alt: string; maxHeight?: number }) => {
+    const [imageError, setImageError] = useState(false);
+    const [imageLoading, setImageLoading] = useState(true);
+
+    return (
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center',
+        minHeight: imageError ? '100px' : `${maxHeight}px`,
+        border: '1px solid #ddd',
+        borderRadius: '4px',
+        backgroundColor: '#f9f9f9',
+        position: 'relative',
+        overflow: 'hidden',
+        marginTop: '8px'
+      }}>
+        {imageError ? (
+          <div style={{ textAlign: 'center', color: '#666', padding: '16px' }}>
+            <div style={{ fontSize: '14px' }}>图片加载失败</div>
+            <div style={{ fontSize: '12px', wordBreak: 'break-all', marginTop: '4px' }}>
+              {src}
+            </div>
+          </div>
+        ) : (
+          <>
+            {imageLoading && (
+              <div style={{ 
+                position: 'absolute', 
+                top: '50%', 
+                left: '50%', 
+                transform: 'translate(-50%, -50%)',
+                color: '#666',
+                fontSize: '14px'
+              }}>
+                加载中...
+              </div>
+            )}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={src}
+              alt={alt}
+              style={{
+                maxWidth: '100%',
+                maxHeight: `${maxHeight}px`,
+                objectFit: 'contain',
+                display: imageLoading ? 'none' : 'block'
+              }}
+              onLoad={() => setImageLoading(false)}
+              onError={() => {
+                setImageError(true);
+                setImageLoading(false);
+              }}
+            />
+          </>
+        )}
+      </div>
+    );
+  };
+
+  // 处理初始数据的加载
+  useEffect(() => {
+    if (initialData) {
+      setTextInput(initialData.AGENT_USER_INPUT || '');
+      setQuotes(initialData.quote || []);
+      
+      // 处理初始图片数据
+      if (initialData.live && initialData.live.length > 0) {
+        const initialImages: ExtendedFile[] = initialData.live.map((img, index) => {
+          // 创建一个虚拟的 File 对象来表示已上传的图片
+          const virtualFile = new File([''], `image-${index}`, { type: 'image/jpeg' }) as ExtendedFile;
+          virtualFile.uploadedUrl = img.url;
+          virtualFile.customDesc = img.desc;
+          return virtualFile;
+        });
+        setImages(initialImages);
+      } else {
+        setImages([]);
+      }
+    } else {
+      // 重置所有状态
+      setTextInput('');
+      setImages([]);
+      setQuotes([]);
+    }
+  }, [initialData]);
 
   // 处理文本输入
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -258,23 +511,19 @@ const NewsInputComponent: React.FC<NewsInputComponentProps> = ({ onSubmit }) => 
   // 提交表单
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!textInput.trim()) {
       alert('请输入文本内容');
       return;
     }
-
     // 检查是否有图片还在上传中
     const unuploadedImages = images.filter(img => !img.uploadedUrl);
     if (unuploadedImages.length > 0) {
       alert('还有图片正在上传中，请稍候再提交');
       return;
     }
-
     setIsLoading(true);
-    
     try {
-      // 为发言记录添加图片描述
+      // 构造提交数据
       const quotesWithDesc = quotes.map(quote => ({
         name: quote.name,
         image: quote.image,
@@ -282,29 +531,37 @@ const NewsInputComponent: React.FC<NewsInputComponentProps> = ({ onSubmit }) => 
         needAiSummary: quote.needAiSummary,
         desc: quote.image ? (quote.customDesc || `发言人${quote.name}的发言图片`) : undefined
       }));
-      
-      // 创建包含描述的现场图片数组（使用已上传的URL）
       const liveWithDesc = images.map((img, index) => ({
-        url: img.uploadedUrl!, // 使用已上传的URL
+        url: img.uploadedUrl!,
         desc: img.customDesc || `现场图片${index + 1}号`
       }));
-      
       const data: InputData = {
         AGENT_USER_INPUT: textInput,
         live: liveWithDesc,
         quote: quotesWithDesc
       };
-
-      console.log('最终提交的数据:', {
-        AGENT_USER_INPUT: data.AGENT_USER_INPUT,
-        live: data.live,
-        live_count: data.live.length,
-        quote: data.quote,
-        quote_count: data.quote.length
+      // 发送到后端
+      const response = await fetch('/api/generate-news', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
       });
-
+      console.log('API响应状态:', response.status);
+      const result = await response.json();
+      console.log('API返回结果:', result);
+      if (result.error) {
+        alert(result.error);
+        // 保持原样，不做任何修改
+        return;
+      }
+      // 正常输出 output 字段
       if (onSubmit) {
-        onSubmit(data);
+        onSubmit({
+          AGENT_USER_INPUT: textInput,
+          live: liveWithDesc,
+          quote: quotesWithDesc,
+          output: result.output // 传递 output 字段
+        });
       }
     } catch (error) {
       console.error('处理数据时出错:', error);
@@ -382,6 +639,17 @@ const NewsInputComponent: React.FC<NewsInputComponentProps> = ({ onSubmit }) => 
                         </button>
                       </div>
                     </div>
+                    
+                    {/* 图片预览 */}
+                    {image.uploadedUrl && (
+                      <div className="mb-3">
+                        <ImagePreview 
+                          src={image.uploadedUrl} 
+                          alt={`现场图片 ${index + 1}`}
+                          maxHeight={200}
+                        />
+                      </div>
+                    )}
                     
                     {/* 图片描述设置 */}
                     <div className="mt-2">
@@ -547,6 +815,15 @@ const NewsInputComponent: React.FC<NewsInputComponentProps> = ({ onSubmit }) => 
                           >
                             删除图片
                           </button>
+                        </div>
+                        
+                        {/* 发言人图片预览 */}
+                        <div className="mb-3">
+                          <ImagePreview 
+                            src={quote.image} 
+                            alt={`发言人${quote.name}的图片`}
+                            maxHeight={150}
+                          />
                         </div>
                         
                         {/* 发言图片描述设置 */}

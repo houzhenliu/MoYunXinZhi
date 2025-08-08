@@ -1,0 +1,6 @@
+{
+  "API Key": "your_api_key_here",
+  "API Secret": "your_api_secret_here",
+  "API flowid": "your_flow_id_here",
+  "url": "https://xingchen-api.xf-yun.com/workflow/v1/chat"
+}

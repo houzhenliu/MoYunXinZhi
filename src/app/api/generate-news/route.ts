@@ -61,17 +61,37 @@ export async function POST(request: NextRequest) {
 
     const responseText = await response.text();
     
+    // 打印讯飞星火原始返回到终端
+    console.log('=== 讯飞星火原始响应 ===');
+    console.log(responseText);
+    console.log('========================');
+    
     let result;
     try {
       const parsedResponse = JSON.parse(responseText);
+      console.log('=== 解析后的响应对象 ===');
+      console.log(JSON.stringify(parsedResponse, null, 2));
+      console.log('========================');
       
       if (parsedResponse.choices && parsedResponse.choices[0] && parsedResponse.choices[0].delta && parsedResponse.choices[0].delta.content) {
         const contentString = parsedResponse.choices[0].delta.content;
-        const contentJson = JSON.parse(contentString);
+        console.log('=== Content 字段内容 ===');
+        console.log(contentString);
+        console.log('========================');
         
-        if (contentJson.output) {
+        const contentJson = JSON.parse(contentString);
+        console.log('=== 解析后的 Content JSON ===');
+        console.log(JSON.stringify(contentJson, null, 2));
+        console.log('========================');
+        
+        // 检查是否有错误信息
+        if (contentJson.error) {
+          // 如果有错误，直接返回错误信息给前端处理
+          return NextResponse.json({ error: contentJson.error }, { status: 400 });
+        } else if (contentJson.hasOwnProperty('output')) {
+          // 如果有 output 字段（即使是空字符串），正常返回
           result = {
-            content: contentJson.output,
+            content: contentJson.output || "生成的内容为空",
             title: "AI 生成的新闻稿",
             summary: "基于您提供的数据，AI 为您生成的专业新闻稿"
           };
