@@ -25,15 +25,18 @@ import {
 } from '@mui/material';
 import {
   Description as DescriptionIcon,
-  Download as DownloadIcon,
   Delete as DeleteIcon,
   Close as CloseIcon,
   ContentCopy as ContentCopyIcon,
   Visibility as VisibilityIcon,
+  TextSnippet as TextSnippetIcon,
+  Article as ArticleIcon,
 } from '@mui/icons-material';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import NewsInputComponent, { parseContentWithImages } from './NewsInputComponent';
+import { Document, Packer, Paragraph, TextRun, ImageRun } from 'docx';
+import { saveAs } from 'file-saver';
 
 // 创建 Material-UI 主题
 const theme = createTheme({
@@ -263,16 +266,176 @@ const NewsGeneratorApp: React.FC = () => {
     }
   };
 
-  const handleDownload = () => {
+  // 下载为TXT文件
+  const handleDownloadTxt = () => {
     if (!newsResult) return;
 
     const element = document.createElement('a');
-    const file = new Blob([newsResult.content], { type: 'text/plain' });
+    const file = new Blob([newsResult.content], { type: 'text/plain;charset=utf-8' });
     element.href = URL.createObjectURL(file);
     element.download = `新闻稿_${new Date().toISOString().split('T')[0]}.txt`;
     document.body.appendChild(element);
     element.click();
     document.body.removeChild(element);
+  };
+
+  // 下载为Word文档
+  const handleDownloadWord = async () => {
+    if (!newsResult) return;
+
+    try {
+      // 构建图片映射
+      const imageMap: { [desc: string]: string } = {};
+      
+      // 添加现场图片映射
+      if (inputData?.live) {
+        inputData.live.forEach(item => {
+          if (item && item.desc && item.url) {
+            imageMap[item.desc] = item.url;
+          }
+        });
+      }
+      
+      // 添加发言图片映射
+      if (inputData?.quote) {
+        inputData.quote.forEach(quote => {
+          if (quote && quote.image && quote.desc) {
+            imageMap[quote.desc] = quote.image;
+          }
+        });
+      }
+
+      // 处理内容，替换图片占位符并创建段落
+      const processContentForWord = async (content: string) => {
+        const paragraphs: Paragraph[] = [];
+        const parts = content.split(/(\[\[[^\]]+\]\])/);
+        
+        let currentTextParts: string[] = [];
+        
+        for (const part of parts) {
+          // 检查是否是图片占位符
+          const match1 = part.match(/\[\[这里情插入"([^"]+)"\]\]/);
+          const match2 = part.match(/\[\[([^\]]+)\]\]/);
+          const imageDesc = match1 ? match1[1] : (match2 ? match2[1] : null);
+          
+          if (imageDesc && imageMap[imageDesc]) {
+            try {
+              // 先处理之前累积的文本
+              if (currentTextParts.length > 0) {
+                const textContent = currentTextParts.join('').trim();
+                if (textContent) {
+                  paragraphs.push(
+                    new Paragraph({
+                      children: [
+                        new TextRun({
+                          text: textContent,
+                          size: 24, // 12pt
+                        }),
+                      ],
+                      spacing: {
+                        after: 200,
+                      },
+                    })
+                  );
+                }
+                currentTextParts = [];
+              }
+              
+              // 获取图片数据并创建图片段落
+              const response = await fetch(imageMap[imageDesc]);
+              const arrayBuffer = await response.arrayBuffer();
+              const uint8Array = new Uint8Array(arrayBuffer);
+              
+              paragraphs.push(
+                new Paragraph({
+                  children: [
+                    new ImageRun({
+                      data: uint8Array,
+                      transformation: {
+                        width: 400,
+                        height: 300,
+                      },
+                      type: 'jpg',
+                    })
+                  ],
+                  spacing: {
+                    after: 200,
+                  },
+                })
+              );
+            } catch (error) {
+              console.error('加载图片失败:', error);
+              // 如果图片加载失败，作为文本处理
+              currentTextParts.push(part);
+            }
+          } else if (part.trim()) {
+            // 普通文本内容
+            currentTextParts.push(part);
+          }
+        }
+        
+        // 处理最后剩余的文本
+        if (currentTextParts.length > 0) {
+          const textContent = currentTextParts.join('').trim();
+          if (textContent) {
+            paragraphs.push(
+              new Paragraph({
+                children: [
+                  new TextRun({
+                    text: textContent,
+                    size: 24, // 12pt
+                  }),
+                ],
+                spacing: {
+                  after: 200,
+                },
+              })
+            );
+          }
+        }
+        
+        return paragraphs;
+      };
+
+      // 将内容分段处理
+      const paragraphs = newsResult.content.split('\n').filter(line => line.trim() !== '');
+      const docChildren = [];
+
+      // 标题
+      docChildren.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: newsResult.title || '新闻稿',
+              bold: true,
+              size: 32, // 16pt
+            }),
+          ],
+          spacing: {
+            after: 400,
+          },
+        })
+      );
+
+      // 处理每个段落
+      for (const para of paragraphs) {
+        const processedParagraphs = await processContentForWord(para);
+        docChildren.push(...processedParagraphs);
+      }
+
+      const doc = new Document({
+        sections: [{
+          properties: {},
+          children: docChildren,
+        }],
+      });
+
+      const buffer = await Packer.toBlob(doc);
+      saveAs(buffer, `新闻稿_${new Date().toISOString().split('T')[0]}.docx`);
+    } catch (error) {
+      console.error('生成Word文档失败:', error);
+      alert('生成Word文档失败，请重试');
+    }
   };
 
   const handleReset = () => {
@@ -480,13 +643,24 @@ const NewsGeneratorApp: React.FC = () => {
                     <Typography variant="h6">
                       生成的新闻稿
                     </Typography>
-                    <Button
-                      variant="contained"
-                      startIcon={<DownloadIcon />}
-                      onClick={handleDownload}
-                    >
-                      下载文件
-                    </Button>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        startIcon={<TextSnippetIcon />}
+                        onClick={handleDownloadTxt}
+                      >
+                        保存为TXT
+                      </Button>
+                      <Button
+                        variant="contained"
+                        size="small"
+                        startIcon={<ArticleIcon />}
+                        onClick={handleDownloadWord}
+                      >
+                        保存为Word
+                      </Button>
+                    </Box>
                   </Box>
                   <Divider sx={{ mb: 2 }} />
                   {newsResult.title && (
