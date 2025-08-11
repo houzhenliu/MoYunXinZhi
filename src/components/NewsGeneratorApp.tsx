@@ -611,7 +611,7 @@ const NewsGeneratorApp: React.FC = () => {
                 <Typography variant="h6" gutterBottom>
                   1. 输入内容
                 </Typography>
-                <NewsInputComponent onSubmit={handleInputSubmit} initialData={inputData} />
+                <NewsInputComponent onSubmit={handleInputSubmit} initialData={inputData} isSubmitting={isLoading} />
               </CardContent>
             </Card>
 

@@ -11,10 +11,6 @@ interface InputData {
   quote: QuoteItem[];
 }
 
-interface OutputData extends InputData {
-  output: string;
-}
-
 interface QuoteItem {
   name: string;
   image?: string;
@@ -30,8 +26,9 @@ interface ExtendedFile extends File {
 }
 
 interface NewsInputComponentProps {
-  onSubmit?: (data: OutputData) => void;
+  onSubmit?: (data: InputData) => void;
   initialData?: InputData | null; // 添加初始数据支持
+  isSubmitting?: boolean; // 添加外部加载状态
 }
 
 // 解析返回内容中的图片标记并支持 Markdown 渲染
@@ -267,7 +264,9 @@ export const parseContentWithImages = (
       </div>
     );
   }
-};const NewsInputComponent: React.FC<NewsInputComponentProps> = ({ onSubmit, initialData }) => {
+};
+
+const NewsInputComponent: React.FC<NewsInputComponentProps> = ({ onSubmit, initialData, isSubmitting = false }) => {
   const [textInput, setTextInput] = useState<string>(initialData?.AGENT_USER_INPUT || '');
   const [images, setImages] = useState<ExtendedFile[]>([]);
   const [quotes, setQuotes] = useState<QuoteItem[]>(initialData?.quote || []);
@@ -521,7 +520,7 @@ export const parseContentWithImages = (
       alert('还有图片正在上传中，请稍候再提交');
       return;
     }
-    setIsLoading(true);
+    
     try {
       // 构造提交数据
       const quotesWithDesc = quotes.map(quote => ({
@@ -540,34 +539,14 @@ export const parseContentWithImages = (
         live: liveWithDesc,
         quote: quotesWithDesc
       };
-      // 发送到后端
-      const response = await fetch('/api/generate-news', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
-      console.log('API响应状态:', response.status);
-      const result = await response.json();
-      console.log('API返回结果:', result);
-      if (result.error) {
-        alert(result.error);
-        // 保持原样，不做任何修改
-        return;
-      }
-      // 正常输出 output 字段
+      
+      // 直接调用父组件的回调函数，不再在这里调用API
       if (onSubmit) {
-        onSubmit({
-          AGENT_USER_INPUT: textInput,
-          live: liveWithDesc,
-          quote: quotesWithDesc,
-          output: result.output // 传递 output 字段
-        });
+        onSubmit(data);
       }
     } catch (error) {
       console.error('处理数据时出错:', error);
       alert('处理数据时出错，请重试');
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -874,10 +853,10 @@ export const parseContentWithImages = (
         <div>
           <button
             type="submit"
-            disabled={isLoading || !textInput.trim()}
+            disabled={isLoading || isSubmitting || !textInput.trim()}
             className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:bg-gray-400 disabled:cursor-not-allowed transition duration-200"
           >
-            {isLoading ? '生成中...' : '生成新闻稿'}
+            {isLoading || isSubmitting ? '生成中...' : '生成新闻稿'}
           </button>
         </div>
       </form>
