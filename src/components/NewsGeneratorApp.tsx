@@ -82,13 +82,16 @@ const NewsGeneratorApp: React.FC = () => {
   const [inputData, setInputData] = useState<InputData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [newsResult, setNewsResult] = useState<NewsResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
   
   // 历史记录相关状态
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [selectedHistoryItem, setSelectedHistoryItem] = useState<HistoryItem | null>(null);
   const [showHistoryDetail, setShowHistoryDetail] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
+  
+  // 错误弹框状态
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string>('');
 
   // 图片预览组件
   const ImagePreview = ({ src, alt, maxHeight = 300 }: { src: string; alt: string; maxHeight?: number }) => {
@@ -190,7 +193,6 @@ const NewsGeneratorApp: React.FC = () => {
   const loadHistoryItem = (item: HistoryItem) => {
     setInputData(item.inputData);
     setNewsResult(item.result);
-    setError(null);
     setShowHistoryDetail(false); // 关闭详情弹窗
   };
 
@@ -228,7 +230,6 @@ const NewsGeneratorApp: React.FC = () => {
   const handleInputSubmit = async (data: InputData) => {
     setInputData(data);
     setIsLoading(true);
-    setError(null);
 
     try {
       // 发送到后端 API
@@ -245,7 +246,10 @@ const NewsGeneratorApp: React.FC = () => {
         try {
           const errorResult = await response.json();
           if (errorResult.error) {
-            throw new Error(`${errorResult.error}: ${errorResult.details || ''}`);
+            // 显示错误弹框而不是设置error状态
+            setErrorMessage(errorResult.error);
+            setShowErrorDialog(true);
+            return;
           } else {
             throw new Error(`请求失败: ${response.status} ${response.statusText}`);
           }
@@ -260,7 +264,10 @@ const NewsGeneratorApp: React.FC = () => {
       // 保存到历史记录
       saveToHistory(data, result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '生成新闻稿时发生未知错误');
+      // 其他类型的错误仍然使用弹框显示
+      const errorMsg = err instanceof Error ? err.message : '生成新闻稿时发生未知错误';
+      setErrorMessage(errorMsg);
+      setShowErrorDialog(true);
     } finally {
       setIsLoading(false);
     }
@@ -441,7 +448,8 @@ const NewsGeneratorApp: React.FC = () => {
   const handleReset = () => {
     setInputData(null);
     setNewsResult(null);
-    setError(null);
+    setShowErrorDialog(false);
+    setErrorMessage('');
     // 关闭历史记录相关弹窗
     setShowHistoryDetail(false);
     setSelectedHistoryItem(null);
@@ -626,13 +634,6 @@ const NewsGeneratorApp: React.FC = () => {
                   重新开始
                 </Button>
               </Box>
-            )}
-
-            {/* 错误信息 */}
-            {error && (
-              <Alert severity="error" sx={{ mb: 4 }}>
-                {error}
-              </Alert>
             )}
 
             {/* 结果显示 */}
@@ -959,6 +960,36 @@ const NewsGeneratorApp: React.FC = () => {
           message="复制成功!"
           anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
         />
+
+        {/* 错误弹框 */}
+        <Dialog
+          open={showErrorDialog}
+          onClose={() => setShowErrorDialog(false)}
+          maxWidth="sm"
+          fullWidth
+        >
+          <DialogTitle>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Typography variant="h6" color="error">操作失败</Typography>
+              <IconButton onClick={() => setShowErrorDialog(false)}>
+                <CloseIcon />
+              </IconButton>
+            </Box>
+          </DialogTitle>
+          <DialogContent>
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {errorMessage}
+            </Alert>
+            <Typography variant="body2" color="text.secondary">
+              请检查您的输入内容，或者稍后再试。如果问题持续存在，请联系技术支持。
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setShowErrorDialog(false)} variant="contained" color="primary">
+              我知道了
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Box>
     </ThemeProvider>
   );
