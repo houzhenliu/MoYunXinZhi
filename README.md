@@ -1,15 +1,17 @@
-# 新闻稿生成器
+# 墨韵新智 (MoYun XinZhi)
 
-这是一个使用 Next.js 和 Material-UI 构建的现代化新闻稿生成器前端应用程序。用户可以上传 JSON 数据文件，系统将调用后端 API 生成专业的新闻稿。
+墨韵新智是一个基于 AI 技术的智能新闻稿生成系统。使用 Next.js 和 Material-UI 构建，支持文本输入、图片上传和发言记录，通过 AI 工作流生成专业的新闻稿内容。
 
 ## 功能特性
 
-- 📁 **文件上传**: 支持拖拽和点击上传 JSON 文件
-- 🤖 **AI 生成**: 调用后端 API 生成专业新闻稿
+- � **智能输入**: 支持文本内容输入，描述新闻背景和主要内容
+- 🖼️ **图片上传**: 支持拖拽和选择上传相关图片，自动生成图片描述
+- 🎤 **发言记录**: 支持添加多个发言人的发言内容和照片
+- 🤖 **AI 生成**: 调用星火大模型工作流 API 生成专业新闻稿
 - 📄 **实时预览**: 在线查看生成的新闻稿内容
-- 💾 **下载功能**: 一键下载生成的新闻稿文件
-- 🎨 **现代 UI**: 使用 Material-UI 构建的美观界面
+- 💾 **历史记录**: 自动保存生成历史，支持查看和复用
 - 📱 **响应式设计**: 支持各种设备屏幕尺寸
+- 🎨 **现代 UI**: 使用 Material-UI 构建的美观界面
 
 ## 技术栈
 
@@ -32,14 +34,20 @@
 npm install
 ```
 
-### 配置环境变量
+### 配置 API 密钥
 
-复制 `.env.local` 文件并配置您的后端 API 地址：
+复制 `public/config.json.example` 文件为 `public/config.json` 并配置您的 API 信息：
 
-```bash
-# 后端 API 地址
-BACKEND_API_URL=http://your-backend-api-url/api/generate-news
+```json
+{
+  "API Key": "your_api_key_here",
+  "API Secret": "your_api_secret_here", 
+  "API flowid": "your_flow_id_here",
+  "url": "https://xingchen-api.xf-yun.com/workflow/v1/chat/completions"
+}
 ```
+
+**注意**: `config.json` 文件已被添加到 `.gitignore`，不会被推送到远程仓库。
 
 ### 启动开发服务器
 
@@ -58,43 +66,57 @@ npm start
 
 ## 使用说明
 
-1. **上传 JSON 文件**: 点击上传区域或拖拽文件到指定区域
-2. **验证文件格式**: 系统会自动验证 JSON 格式的有效性
-3. **生成新闻稿**: 点击"生成新闻稿"按钮
-4. **查看结果**: 在页面下方查看生成的新闻稿内容
-5. **下载文件**: 点击"下载文件"按钮保存新闻稿
+1. **输入主要内容**: 在文本框中描述新闻的主要内容和背景
+2. **上传相关图片**: 点击上传区域或拖拽图片文件，系统会自动上传并生成描述
+3. **添加发言记录**: 点击"添加发言"按钮，输入发言人信息和发言内容
+4. **生成新闻稿**: 点击"生成新闻稿"按钮，系统将调用 AI 工作流生成新闻稿
+5. **查看结果**: 在页面下方查看生成的新闻稿内容
+6. **下载文件**: 点击"下载 TXT 文件"按钮保存新闻稿
+7. **查看历史**: 通过历史记录功能查看和复用之前的生成结果
 
-## JSON 数据格式示例
+## 数据格式说明
+
+系统接受以下格式的输入数据：
 
 ```json
 {
-  "title": "新产品发布",
-  "company": "科技创新有限公司",
-  "product": "智能家居控制系统",
-  "releaseDate": "2025-08-04",
-  "keyFeatures": [
-    "语音控制",
-    "远程监控",
-    "节能模式",
-    "智能学习"
+  "AGENT_USER_INPUT": "新闻的主要内容和背景描述",
+  "live": [
+    {
+      "url": "https://example.com/image1.jpg",
+      "desc": "图片描述文字"
+    }
   ],
-  "targetMarket": "家庭用户和小型企业",
-  "price": "2999元",
-  "availability": "即日起在全国各大电子商城销售",
-  "contact": {
-    "phone": "400-123-4567",
-    "email": "pr@techcompany.com",
-    "website": "www.techcompany.com"
-  },
-  "additionalInfo": "产品的其他重要信息..."
+  "quote": [
+    {
+      "name": "发言人姓名",
+      "image": "https://example.com/person.jpg",
+      "content": "发言人的具体发言内容",
+      "needAiSummary": 0,
+      "desc": "发言人照片描述",
+      "customDesc": "自定义图片描述（可选）"
+    }
+  ]
 }
 ```
+
+### 字段说明
+
+- **AGENT_USER_INPUT**: 主要的新闻内容和背景描述
+- **live**: 相关图片数组，每个图片包含 URL 和描述
+- **quote**: 发言记录数组，包含发言人信息和发言内容
+  - `name`: 发言人姓名
+  - `image`: 发言人照片 URL（可选）
+  - `content`: 发言内容
+  - `needAiSummary`: 是否需要 AI 总结（0=否，1=是）
+  - `desc`: 图片描述
+  - `customDesc`: 自定义描述（可选）
 
 ## API 接口
 
 ### POST /api/generate-news
 
-**请求体**: JSON 数据对象
+**请求体**: 包含 AGENT_USER_INPUT、live、quote 字段的 JSON 对象
 
 **响应格式**:
 ```json
@@ -105,28 +127,39 @@ npm start
 }
 ```
 
+### POST /api/upload-file
+
+**请求体**: FormData 格式的文件上传
+
+**响应格式**: 返回上传文件的 URL
+
 ## 项目结构
 
 ```
 src/
 ├── app/
-│   ├── api/generate-news/route.ts  # API 路由
+│   ├── api/
+│   │   ├── generate-news/route.ts  # 新闻生成 API
+│   │   └── upload-file/route.ts    # 文件上传 API
 │   ├── globals.css                 # 全局样式
 │   ├── layout.tsx                  # 应用布局
 │   └── page.tsx                    # 主页面
 ├── components/
-│   └── NewsGeneratorApp.tsx        # 主要组件
+│   ├── NewsGeneratorApp.tsx        # 主应用组件
+│   └── NewsInputComponent.tsx      # 输入组件
 public/
+├── config.json.example             # API 配置示例
 ├── sample-news-data.json           # 示例数据文件
 └── ...                             # 静态资源
 ```
 
 ## 开发注意事项
 
-1. **后端 API**: 确保后端服务正在运行并且 API 地址配置正确
-2. **CORS 设置**: 如果遇到跨域问题，请在后端配置 CORS
-3. **文件大小限制**: 建议限制上传文件大小（当前无限制）
+1. **API 配置**: 确保 `public/config.json` 文件已正确配置 API 密钥和工作流 ID
+2. **文件上传**: 支持图片文件上传，自动调用上游 API 获取文件 URL
+3. **历史记录**: 生成结果会自动保存到本地存储，方便后续查看和复用
 4. **错误处理**: 应用包含完整的错误处理和用户提示
+5. **安全性**: 敏感配置文件已添加到 `.gitignore`，避免泄露 API 密钥
 
 ## 部署
 

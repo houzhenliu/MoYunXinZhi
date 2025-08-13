@@ -275,10 +275,47 @@ const NewsGeneratorApp: React.FC = () => {
 
   // 下载为TXT文件
   const handleDownloadTxt = () => {
-    if (!newsResult) return;
+    if (!newsResult || !inputData) return;
 
+    let content = newsResult.content;
+    
+    // 构建图片映射
+    const imageMap: { [desc: string]: string } = {};
+    
+    // 添加现场图片映射
+    if (inputData.live) {
+      inputData.live.forEach(item => {
+        if (item && item.desc && item.url) {
+          imageMap[item.desc] = item.url;
+        }
+      });
+    }
+    
+    // 添加发言图片映射
+    if (inputData.quote) {
+      inputData.quote.forEach(quote => {
+        if (quote && quote.image && quote.desc) {
+          imageMap[quote.desc] = quote.image;
+        }
+      });
+    }
+    
+    // 处理图片占位符 [[描述]] 和 [[这里情插入"描述"]]
+    content = content.replace(/\[\[这里情插入"([^"]+)"\]\]/g, (match, desc) => {
+      const imageUrl = imageMap[desc];
+      return imageUrl ? `[${imageUrl}]` : match;
+    });
+    
+    content = content.replace(/\[\[([^\]]+)\]\]/g, (match, desc) => {
+      const imageUrl = imageMap[desc];
+      return imageUrl ? `[${imageUrl}]` : match;
+    });
+    
+    // 将 Markdown 格式的图片 ![alt](url) 替换为 [url] 格式
+    content = content.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '[$2]');
+    
     const element = document.createElement('a');
-    const file = new Blob([newsResult.content], { type: 'text/plain;charset=utf-8' });
+    const file = new Blob([content], { type: 'text/plain;charset=utf-8' });
     element.href = URL.createObjectURL(file);
     element.download = `新闻稿_${new Date().toISOString().split('T')[0]}.txt`;
     document.body.appendChild(element);
