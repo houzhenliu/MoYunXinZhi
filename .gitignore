@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+public/workflow_openapi_demo_python.py
+docs/
+public/config.json

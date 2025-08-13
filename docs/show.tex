@@ -1,0 +1,411 @@
+\documentclass[a4paper, 12pt]{article}
+\usepackage[UTF8]{ctex}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{color}
+\usepackage{geometry}
+\usepackage{tcolorbox}
+\usepackage{enumitem}
+\usepackage{fontawesome5}
+\usepackage{xcolor}
+
+\geometry{a4paper,left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm}
+
+% 定义JSON语言支持
+\lstdefinelanguage{json}{
+    keywords={true,false,null},
+    keywordstyle=\color{blue},
+    stringstyle=\color{codestring},
+    string=[s]{"}{"},
+    comment=[l]{:},
+    commentstyle=\color{codekey},
+    morecomment=[l]{:},
+    morestring=[b]',
+    basicstyle=\ttfamily\small,
+}
+
+% 定义JavaScript语言支持
+\lstdefinelanguage{javascript}{
+    keywords={break, case, catch, continue, debugger, default, delete, do, else, false, finally, for, function, if, in, instanceof, new, null, return, switch, this, throw, true, try, typeof, var, void, while, with, let, const, class, export, import, super, extends},
+    keywordstyle=\color{blue},
+    ndkeywords={class, export, boolean, throw, implements, import, this},
+    ndkeywordstyle=\color{blue},
+    identifierstyle=\color{black},
+    sensitive=false,
+    comment=[l]{//},
+    morecomment=[s]{/*}{*/},
+    commentstyle=\color{green!60!black},
+    stringstyle=\color{codestring},
+    string=[b]',
+    string=[b]"
+}
+
+% 定义bash语言支持
+\lstdefinelanguage{bash}{
+    keywords={if, then, else, elif, fi, for, while, in, do, done, exit, return, function},
+    keywordstyle=\color{blue},
+    sensitive=true,
+    comment=[l]{\#},
+    commentstyle=\color{green!60!black},
+    stringstyle=\color{codestring},
+    string=[b]",
+    string=[b]'
+}
+
+\definecolor{codebackground}{rgb}{0.95,0.95,0.95}
+\definecolor{codestring}{rgb}{0.6,0.1,0.1}
+\definecolor{codekey}{rgb}{0.1,0.1,0.6}
+
+\hypersetup{
+    colorlinks=true,
+    linkcolor=blue,
+    filecolor=magenta,
+    urlcolor=cyan,
+}
+
+\lstset{
+    basicstyle=\ttfamily\small,
+    backgroundcolor=\color{codebackground},
+    keywordstyle=\color{blue},
+    stringstyle=\color{codestring},
+    commentstyle=\color{green!60!black},
+    breaklines=true,
+    breakatwhitespace=true,
+    frame=single,
+    showstringspaces=false,
+    tabsize=2,
+    captionpos=b
+}
+
+\title{\LARGE{\textbf{新闻稿生成器系统使用手册}}}
+\author{项目组：ymxz \\ 维护者：houzhenliu}
+\date{\today}
+
+\begin{document}
+
+\begin{titlepage}
+    \centering
+    \vspace*{1cm}
+    % 移除SVG图片，LaTeX不直接支持SVG格式
+    \textsc{\LARGE 挑战杯作品：“墨韵新智”新闻稿生成器系统}\\[0.5cm]
+    \rule{\linewidth}{0.5mm} \\[0.4cm]
+    { \huge \bfseries 新闻稿生成器\\系统使用手册 \\[0.4cm] }
+    \rule{\linewidth}{0.5mm} \\[1.5cm]
+    
+    \begin{minipage}{0.5\textwidth}
+        \begin{center}
+            \large
+            \emph{发布日期:} 2025年8月13日
+        \end{center}
+    \end{minipage}
+    
+    \vfill
+    
+    {\large 项目组：墨韵新智项目组\\
+    维护者：刘厚振，赵瀚焜\\
+    \today}
+    
+\end{titlepage}
+
+\tableofcontents
+\newpage
+
+\section{项目概述}
+
+\subsection{系统简介}
+墨韵新智是一个使用 Next.js 和 Material-UI 构建的现代化前端应用程序，旨在帮助用户快速生成专业的新闻稿。用户可以通过上传 JSON 数据文件或直接在界面中输入信息，系统将调用后端 API 自动生成符合专业标准的新闻稿内容。
+
+\subsection{核心功能}
+\begin{itemize}
+    \item \textbf{文件上传}：支持拖拽和点击上传 JSON 文件
+    \item \textbf{AI 生成}：调用后端 API 生成专业新闻稿
+    \item \textbf{实时预览}：在线查看生成的新闻稿内容
+    \item \textbf{下载功能}：一键下载生成的新闻稿文件（支持多种格式）
+    \item \textbf{现代化界面}：使用 Material-UI 构建的美观界面
+    \item \textbf{响应式设计}：支持各种设备屏幕尺寸
+\end{itemize}
+
+\section{技术架构}
+
+\subsection{技术栈}
+\begin{itemize}
+    \item \textbf{前端框架}：Next.js 15.4.5
+    \item \textbf{UI 库}：Material-UI (MUI) 7.2.0
+    \item \textbf{开发语言}：TypeScript
+    \item \textbf{样式}：Tailwind CSS + Material-UI
+    \item \textbf{图标}：Material Icons
+    \item \textbf{Markdown 渲染}：react-markdown + remark-gfm
+    \item \textbf{文档生成}：docx
+\end{itemize}
+
+\subsection{系统架构图}
+\begin{tcolorbox}[colback=blue!5,colframe=blue!40,title=系统架构图]
+\centering
+用户界面 (Next.js) $\longrightarrow$ API 路由 $\longrightarrow$ 第三方 AI 服务 \\
+$\uparrow$ \hspace{6cm} $\downarrow$ \\
+输出展示与下载 $\longleftarrow$ 数据处理 $\longleftarrow$ 响应数据
+\end{tcolorbox}
+
+\subsection{项目结构}
+\begin{lstlisting}[language=bash, caption=项目文件结构]
+src/
+├── app/
+│   ├── api/
+│   │   ├── generate-news/
+│   │   │   └── route.ts      # 新闻生成 API 路由
+│   │   └── upload-file/
+│   │       └── route.ts      # 文件上传 API 路由
+│   ├── globals.css           # 全局样式
+│   ├── layout.tsx            # 应用布局
+│   └── page.tsx              # 主页面
+├── components/
+│   ├── NewsGeneratorApp.tsx  # 主要应用组件
+│   └── NewsInputComponent.tsx # 新闻输入组件
+public/
+├── sample-news-data.json     # 示例数据文件
+└── ...                       # 其他静态资源
+\end{lstlisting}
+
+\section{安装与配置}
+
+\subsection{环境要求}
+\begin{itemize}
+    \item Node.js 18+
+    \item npm 或 yarn
+    \item 互联网连接（用于API调用）
+\end{itemize}
+
+\subsection{安装步骤}
+\begin{enumerate}
+    \item \textbf{克隆项目代码}
+    \begin{lstlisting}[language=bash]
+    git clone https://github.com/houzhenliu/ymxz.git
+    cd ymxz
+    \end{lstlisting}
+    
+    \item \textbf{安装依赖}
+    \begin{lstlisting}[language=bash]
+    npm install
+    # 或
+    yarn install
+    \end{lstlisting}
+    
+    \item \textbf{配置环境}
+    \begin{lstlisting}[language=bash]
+    # 复制配置文件示例并进行编辑
+    cp config.json.example config.json
+    # 使用文本编辑器打开并填写必要的配置信息
+    \end{lstlisting}
+\end{enumerate}
+
+\subsection{配置文件说明}
+系统使用 \texttt{config.json} 文件存储关键配置参数。以下是配置文件的结构和参数说明：
+
+\begin{lstlisting}[language=json, caption=config.json 示例]
+{
+  "API Key": "your_api_key_here",
+  "API Secret": "your_api_secret_here",
+  "API flowid": "your_flow_id_here",
+  "url": "https://xingchen-api.xf-yun.com/workflow/v1/chat"
+}
+\end{lstlisting}
+
+\begin{itemize}
+    \item \texttt{API Key}：API 访问密钥，由服务提供方提供
+    \item \texttt{API Secret}：API 访问密钥，由服务提供方提供
+    \item \texttt{API flowid}：工作流 ID，用于标识特定的生成流程
+    \item \texttt{url}：API 服务的访问地址
+\end{itemize}
+
+\section{使用指南}
+
+\subsection{启动系统}
+\begin{lstlisting}[language=bash]
+# 开发模式启动
+npm run dev
+
+# 生产模式构建和启动
+npm run build
+npm start
+\end{lstlisting}
+
+应用将在 \url{http://localhost:3000} 启动。
+
+\subsection{基本操作流程}
+\begin{enumerate}[label=\arabic*.]
+    \item \textbf{访问系统}：打开浏览器，访问 \url{http://localhost:3000}
+    \item \textbf{上传数据}：通过拖拽或点击上传区域选择 JSON 文件
+    \item \textbf{编辑内容}：根据需要修改或补充内容
+    \item \textbf{生成新闻稿}：点击"生成新闻稿"按钮
+    \item \textbf{查看预览}：在页面下方实时预览生成的内容
+    \item \textbf{下载文件}：点击"下载"按钮保存生成的新闻稿，可以生成word或者txt格式
+\end{enumerate}
+
+\subsection{数据格式要求}
+系统接受符合以下格式的 JSON 数据：
+
+\begin{lstlisting}[language=json, caption=标准输入数据格式]
+{
+  "AGENT_USER_INPUT": "新闻主题或描述",
+  "live": [
+    { "url": "图片URL", "desc": "图片描述" }
+  ],
+  "quote": [
+    {
+      "name": "引述人姓名",
+      "image": "引述人照片URL",
+      "content": "引述内容",
+      "needAiSummary": 0,
+      "desc": "图片描述",
+      "customDesc": "自定义描述"
+    }
+  ]
+}
+\end{lstlisting}
+
+\subsection{功能说明}
+
+\subsubsection{文件上传}
+系统支持两种上传方式：
+\begin{itemize}
+    \item 拖拽文件到指定区域
+    \item 点击上传区域，通过文件选择器选择文件
+\end{itemize}
+
+上传文件后，系统会自动验证 JSON 格式并显示文件内容。
+
+\subsubsection{新闻稿生成}
+点击"生成新闻稿"按钮后，系统会：
+\begin{itemize}
+    \item 发送请求到后端 API
+    \item 显示生成进度
+    \item 完成后在预览区显示生成结果
+\end{itemize}
+
+\subsubsection{结果导出}
+系统支持多种导出格式：
+\begin{itemize}
+    \item 文本格式（.txt）
+    \item Word 文档（.docx）
+\end{itemize}
+
+点击对应的下载按钮即可导出相应格式的文件。
+
+\section{API 接口说明}
+
+\subsection{新闻生成接口}
+\begin{tcolorbox}[colback=gray!5,colframe=gray!50,title=API 路径]
+\textbf{POST} /api/generate-news
+\end{tcolorbox}
+
+\subsubsection{请求参数}
+请求体包含符合前述数据格式的 JSON 对象。
+
+\subsubsection{响应格式}
+\begin{lstlisting}[language=json]
+{
+  "content": "生成的新闻稿内容",
+  "title": "新闻稿标题（可选）",
+  "summary": "新闻稿摘要（可选）"
+}
+\end{lstlisting}
+
+\subsection{文件上传接口}
+\begin{tcolorbox}[colback=gray!5,colframe=gray!50,title=API 路径]
+\textbf{POST} /api/upload-file
+\end{tcolorbox}
+
+\subsubsection{请求参数}
+请使用 FormData 格式提交文件，并在请求头中包含必要的授权信息：
+\begin{lstlisting}[language=javascript]
+headers: {
+  'Authorization': 'Bearer [token]'
+}
+\end{lstlisting}
+
+\subsubsection{响应格式}
+响应将直接转发自上游服务。
+
+\section{常见问题}
+
+\subsection{配置相关}
+\begin{tcolorbox}[colback=red!5,colframe=red!40,title=问题：配置文件缺失]
+\textbf{错误信息}：配置文件读取失败，请检查 config.json 文件是否存在且格式正确
+
+\textbf{解决方案}：
+\begin{itemize}
+    \item 确认在项目根目录中存在 config.json 文件
+    \item 按照 config.json.example 的格式检查内容
+    \item 确保 JSON 格式无误（无多余逗号、引号匹配等）
+\end{itemize}
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=red!5,colframe=red!40,title=问题：API 配置缺失]
+\textbf{错误信息}：API 配置缺失，请检查 config.json 文件中的配置信息
+
+\textbf{解决方案}：
+\begin{itemize}
+    \item 确认已填写 API Key、API Secret 和 API flowid
+    \item 联系服务提供商获取有效的 API 凭证
+\end{itemize}
+\end{tcolorbox}
+
+\subsection{使用相关}
+\begin{tcolorbox}[colback=yellow!5,colframe=yellow!40,title=问题：文件上传失败]
+\textbf{可能原因}：
+\begin{itemize}
+    \item 文件格式不是有效的 JSON
+    \item 文件大小超出限制
+    \item 网络连接问题
+\end{itemize}
+
+\textbf{解决方案}：
+\begin{itemize}
+    \item 使用 JSON 验证工具检查文件格式
+    \item 确保文件大小合理
+    \item 检查网络连接
+\end{itemize}
+\end{tcolorbox}
+
+\begin{tcolorbox}[colback=yellow!5,colframe=yellow!40,title=问题：新闻稿生成失败]
+\textbf{可能原因}：
+\begin{itemize}
+    \item API 服务不可用
+    \item 提交的数据格式有误
+    \item 授权失败
+\end{itemize}
+
+\textbf{解决方案}：
+\begin{itemize}
+    \item 检查 API 服务状态
+    \item 检查提交的数据格式
+    \item 验证 API 凭证是否有效
+\end{itemize}
+\end{tcolorbox}
+
+\section{许可与支持}
+
+\subsection{许可证}
+本项目采用 MIT 许可证。详情请参阅项目根目录中的 LICENSE 文件。
+
+\subsection{支持与贡献}
+\begin{itemize}
+    \item \textbf{问题报告}：通过 GitHub Issues 提交问题
+    \item \textbf{功能请求}：通过 GitHub Issues 提交功能需求
+    \item \textbf{代码贡献}：欢迎提交 Pull Request
+\end{itemize}
+
+\subsection{联系方式}
+\begin{itemize}
+    \item 项目仓库：\url{https://github.com/houzhenliu/ymxz}
+    \item 维护者：houzhenliu
+\end{itemize}
+
+\vspace{1cm}
+\begin{center}
+\rule{0.5\linewidth}{0.5pt}\\
+\textbf{文档结束}
+\end{center}
+
+\end{document}
